@@ -113,6 +113,15 @@ details.card summary{cursor:pointer;font-family:var(--f-display);font-size:18px}
 .bind{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
 .bind button{min-width:54px;font:700 13px/1 var(--f-hud);background:var(--bg);color:var(--gold);border:1px solid var(--line);border-radius:6px;padding:7px 8px;cursor:pointer}
 .bind button.listen{color:var(--fg);border-color:var(--jade)}
+.ab.has-ic{background-size:cover;background-position:center}
+.ab.has-ic .nm{margin:0 -5px -5px;padding:14px 4px 5px;background:linear-gradient(transparent,rgba(4,7,8,.88));text-shadow:0 1px 2px #000}
+.ab.has-ic .k{text-shadow:0 1px 2px #000,0 0 3px #000}
+.icon-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
+.icon-row .prev{width:36px;height:36px;flex:none;border-radius:6px;border:1px dashed var(--line);background:var(--bg) center/cover no-repeat}
+.icon-row .nm2{flex:1;min-width:0}
+.icon-row label,.icon-row button{font:600 13px/1 var(--f-hud);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;cursor:pointer}
+.icon-row label:focus-within{outline:2px solid var(--jade);outline-offset:2px}
+.icon-row input{position:absolute;width:1px;height:1px;opacity:0}
 .notes{color:var(--muted);font-size:13px;max-width:75ch}
 .notes a{color:var(--jade)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -187,15 +196,18 @@ details.card summary{cursor:pointer;font-family:var(--f-display);font-size:18px}
 
   <details class="card" id="bindsBox">
     <summary>Keybinds</summary>
-    <p class="hint" style="margin:10px 0 0">Click a key, then press the key or mouse button you use in game. Modifier combos (Shift, Ctrl, Alt), numpad keys and mouse buttons 3–5 all work. Saved in this browser.</p>
+    <p class="hint" style="margin:10px 0 0">Click a key, then press the key or mouse button you use in game. Two abilities can share a key. Modifier combos (Shift, Ctrl, Alt), numpad keys and mouse buttons 3–5 all work. Saved in this browser.</p>
     <div class="binds" id="binds"></div>
     <div class="row" style="margin-top:12px">
       <button class="btn ghost" id="resetKeys">Restore default keys</button>
       <button class="btn ghost" id="resetStats">Reset stats</button>
     </div>
+    <h3 style="margin:18px 0 0;font:600 12px/1 var(--f-hud);letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">Ability icons</h3>
+    <p class="hint" style="margin:8px 0 0">Upload an image for any ability and it shows on its button. Square images look best. Icons are saved in this browser only.</p>
+    <div class="binds" id="icons"></div>
   </details>
 
-  <p class="notes">The priority comes from Method's <a href="https://www.method.gg/guides/windwalker-monk/playstyle-and-rotation" target="_blank" rel="noopener">Windwalker playstyle and rotation guide</a> (Patch 12.1, Conduit of the Celestials). The trainer assumes Ascension (6 Chi max), no Obsidian Spiral or Shadowboxing Treads, and that you never repeat the ability you just used (Combo Strikes). Chi costs are approximate: Tiger Palm +2, Blackout Kick 1, Rising Sun Kick 2, Spinning Crane Kick 2, Strike of the Windlord 2, Fists of Fury 3, Zenith Stomp +2. Combo Breaker makes Blackout Kick free, and Dance of Chi-Ji makes Spinning Crane Kick free.</p>
+  <p class="notes">The priority comes from Method's <a href="https://www.method.gg/guides/windwalker-monk/playstyle-and-rotation" target="_blank" rel="noopener">Windwalker playstyle and rotation guide</a> (Patch 12.1, Conduit of the Celestials). The trainer assumes Ascension (6 Chi max), no Obsidian Spiral or Shadowboxing Treads, and that you never repeat the ability you just used (Combo Strikes). Chi costs are approximate: Tiger Palm +2, Blackout Kick 1, Rising Sun Kick 2, Spinning Crane Kick 2, Strike of the Windlord 2, Fists of Fury 3, Zenith Stomp +2. Rushing Wind Kick replaces the Rising Sun Kick button while its proc is up. Combo Breaker makes Blackout Kick free, and Dance of Chi-Ji makes Spinning Crane Kick free.</p>
 </div>
 
 <script>
@@ -206,7 +218,9 @@ const AB = {
   sotw:{name:'Strike of the Windlord',key:'E'}, rwk:{name:'Rushing Wind Kick',key:'R'}, stomp:{name:'Zenith Stomp',key:'F'},
   cc:{name:'Celestial Conduit',key:'G'}
 };
-const ORDER = ['tp','bok','rsk','fof','sck','wdp','sotw','rwk','stomp','cc'];
+const ORDER = ['tp','bok','rsk','fof','sck','wdp','sotw','stomp','cc']; // Rushing Wind Kick shares the Rising Sun Kick button
+const resolve = (x,s)=> x==='rsk'&&s&&s.rwk ? 'rwk' : x;
+const btn = x=> x==='rwk' ? 'rsk' : x;
 const DEFAULT_KEYS = Object.fromEntries(ORDER.map(id=>[id,AB[id].key]));
 
 const RULES = {
@@ -255,7 +269,7 @@ function usable(id,s){
   switch(id){
     case 'tp': return true;
     case 'bok': return s.chi>=1||s.cb;
-    case 'rsk': return s.rskReady&&s.chi>=2;
+    case 'rsk': return s.rskReady&&s.chi>=2&&!s.rwk;
     case 'fof': return s.fofReady&&s.chi>=3;
     case 'sck': return s.chi>=2||s.dance;
     case 'wdp': return s.wdpReady;
@@ -271,7 +285,7 @@ function offCd(id,s){
 function whyNot(id,s){
   switch(id){
     case 'bok': return 'needs 1 Chi';
-    case 'rsk': return !s.rskReady?`on cooldown (${s.cd.rsk}s)`:'needs 2 Chi';
+    case 'rsk': return s.rwk?'button is Rushing Wind Kick while the proc is up':!s.rskReady?`on cooldown (${s.cd.rsk}s)`:'needs 2 Chi';
     case 'fof': return !s.fofReady?`on cooldown (${s.cd.fof}s)`:'needs 3 Chi';
     case 'sck': return 'needs 2 Chi';
     case 'wdp': return !s.wdpCd?`on cooldown (${s.cd.wdp}s)`:'locked until RSK and FoF are both on cooldown';
@@ -324,6 +338,7 @@ const store = {
 };
 const settings = Object.assign({mode:'st',pace:'learn',drill:true,sound:true}, store.get('settings',{}));
 const keys = Object.assign({}, DEFAULT_KEYS, store.get('keys',{}));
+const icons = Object.assign({}, store.get('icons',{}));
 let stats = Object.assign({total:0,correct:0,streak:0,best:0,times:[],rules:{}}, store.get('stats',{}));
 
 // ---------- audio ----------
@@ -372,20 +387,44 @@ function renderState(s){
   ORDER.forEach(id=>{
     const b=$('ab-'+id), cd=b.querySelector('.cd');
     b.classList.remove('right','wrong','answer','glow','nochi');
-    const off=offCd(id,s);
+    const swap=id==='rsk'&&s.rwk;
+    b.querySelector('.nm').textContent = swap?AB.rwk.name:AB[id].name;
+    const off=swap||offCd(id,s);
     if(!off){
       cd.hidden=false;
       if(id==='wdp'&&s.wdpCd) cd.innerHTML='<small>locked</small>';
       else if(id==='sotw'&&s.mode==='st') cd.innerHTML='<small>not used</small>';
-      else if(id==='rwk') cd.innerHTML='<small>no proc</small>';
       else if(id==='stomp') cd.innerHTML=`<small>${s.zenith==='off'?'no Zenith':'0 left'}</small>`;
       else cd.textContent=s.cd[id];
     } else {
       cd.hidden=true;
-      if(!usable(id,s)) b.classList.add('nochi');
+      if(!swap&&!usable(id,s)) b.classList.add('nochi');
     }
-    if((id==='rwk'&&s.rwk)||(id==='bok'&&s.cb)||(id==='sck'&&s.dance)) b.classList.add('glow');
+    if(swap||(id==='bok'&&s.cb)||(id==='sck'&&s.dance)) b.classList.add('glow');
   });
+  paintIcons(s);
+}
+function paintIcons(s){
+  ORDER.forEach(id=>{
+    const b=$('ab-'+id), ic=icons[(id==='rsk'&&s&&s.rwk)?'rwk':id];
+    b.classList.toggle('has-ic',!!ic);
+    b.style.backgroundImage = ic?`url("${ic}")`:'';
+  });
+}
+const ICON_IDS=['tp','bok','rsk','rwk','fof','sck','wdp','sotw','stomp','cc'];
+function renderIcons(){
+  $('icons').innerHTML = ICON_IDS.map(id=>`<div class="icon-row"><span class="prev" style="${icons[id]?`background-image:url('${icons[id]}');border-style:solid`:''}"></span><span class="nm2">${AB[id].name}</span><label>${icons[id]?'Change':'Upload'}<input type="file" accept="image/*" data-id="${id}" aria-label="Upload icon for ${AB[id].name}"></label>${icons[id]?`<button type="button" data-clear="${id}" aria-label="Remove icon for ${AB[id].name}">Remove</button>`:''}</div>`).join('');
+  $('icons').querySelectorAll('input[type=file]').forEach(inp=>inp.addEventListener('change',()=>{ if(inp.files[0]) loadIcon(inp.files[0],inp.dataset.id); }));
+  $('icons').querySelectorAll('[data-clear]').forEach(b=>b.addEventListener('click',()=>{ delete icons[b.dataset.clear]; store.set('icons',icons); renderIcons(); paintIcons(cur); }));
+}
+function loadIcon(file,id){
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const c=document.createElement('canvas'); c.width=c.height=96; const g=c.getContext('2d'); const m=Math.min(img.width,img.height);
+    g.drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,96,96);
+    icons[id]=c.toDataURL('image/jpeg',.88); store.set('icons',icons); renderIcons(); paintIcons(cur);
+  }; img.src=r.result; };
+  r.readAsDataURL(file);
 }
 
 // ---------- flow ----------
@@ -417,6 +456,7 @@ function startTimer(){
 }
 function press(id){
   if(phase!=='card') return;
+  id=resolve(id,cur);
   cancelAnimationFrame(raf);
   const rt=performance.now()-shownAt;
   const ans=ev.rows[ev.answer].r.ab, ok=id===ans, k=ruleKey(cur,ev.answer);
@@ -425,14 +465,14 @@ function press(id){
   if(ok){ stats.correct++; stats.streak++; stats.best=Math.max(stats.best,stats.streak); stats.times.push(Math.round(rt)); stats.times=stats.times.slice(-25); }
   else { r.miss++; stats.streak=0; }
   store.set('stats',stats); renderStats();
-  if(id) $('ab-'+id).classList.add(ok?'right':'wrong');
+  if(id) $('ab-'+btn(id)).classList.add(ok?'right':'wrong');
   if(ok){
     ding(); phase='flash';
     $('feedback').innerHTML=`<div class="verdict"><p><span class="ok">${AB[ans].name}</span> · rule ${ev.answer+1}: ${ev.rows[ev.answer].r.t}</p><span class="hint">${(rt/1000).toFixed(2)}s</span></div>`;
     setTimeout(()=>{ if(phase==='flash') nextCard(); }, settings.pace==='learn'?700:420);
   } else {
     bonk(); phase='review';
-    $('ab-'+ans).classList.add('answer');
+    $('ab-'+btn(ans)).classList.add('answer');
     showReview(id);
   }
 }
@@ -495,7 +535,7 @@ document.addEventListener('keydown',e=>{
 function handleInput(k,e){
   if(listening){
     e.preventDefault();
-    if(k!=='Escape'&&k!=='Space'&&k!=='Tab'){ ORDER.forEach(id=>{ if(keys[id]===k) keys[id]=keys[listening]; }); keys[listening]=k; store.set('keys',keys); }
+    if(k!=='Escape'&&k!=='Space'&&k!=='Tab'){ keys[listening]=k; store.set('keys',keys); }
     listening=null; paintKeys(); return;
   }
   if(k==='Space'){
@@ -504,8 +544,12 @@ function handleInput(k,e){
     else e.preventDefault();
     return;
   }
-  const id=ORDER.find(x=>keys[x]===k);
-  if(id&&phase==='card'){ e.preventDefault(); press(id); }
+  const ids=ORDER.filter(x=>keys[x]===k).map(x=>resolve(x,cur));
+  if(ids.length&&phase==='card'){
+    e.preventDefault();
+    const ans=ev.rows[ev.answer].r.ab;
+    press(ids.includes(ans)?ans:(ids.find(x=>usable(x,cur))||ids[0]));
+  }
 }
 
 // ---------- settings ----------
@@ -527,7 +571,7 @@ $('resetStats').addEventListener('click',e=>{
 });
 
 // ---------- initial sample frame ----------
-paintKeys(); renderStats();
+paintKeys(); renderStats(); renderIcons();
 cur=genState(settings.mode==='aoe'?'aoe':'st'); ev=evaluate(cur); renderState(cur);
 })();
 </script>
