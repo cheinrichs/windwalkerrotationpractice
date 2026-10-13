@@ -17,6 +17,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
 .wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
@@ -538,7 +539,7 @@ function handleInput(k,e){
     if(k!=='Escape'&&k!=='Space'&&k!=='Tab'){ keys[listening]=k; store.set('keys',keys); }
     listening=null; paintKeys(); return;
   }
-  if(k==='Space'){
+  if(k==='Space'||k.endsWith('+Space')){
     if(document.activeElement&&document.activeElement.tagName==='BUTTON'&&document.activeElement.id!=='nextBtn'&&document.activeElement.id!=='startBtn'&&phase==='card') { e.preventDefault(); }
     if(phase==='idle'||phase==='review'){ e.preventDefault(); audio(); nextCard(); }
     else e.preventDefault();
@@ -562,7 +563,7 @@ function seg(elId,key){
 seg('segMode','mode'); seg('segPace','pace');
 function tog(elId,key){ const el=$(elId); const paint=()=>el.setAttribute('aria-pressed',String(!!settings[key])); el.addEventListener('click',()=>{ settings[key]=!settings[key]; store.set('settings',settings); paint(); }); paint(); }
 tog('tgDrill','drill'); tog('tgSound','sound');
-$('startBtn').addEventListener('click',()=>{ audio(); nextCard(); });
+$('overlay').addEventListener('click',()=>{ if(phase==='idle'){ audio(); nextCard(); } });
 $('resetKeys').addEventListener('click',()=>{ Object.assign(keys,DEFAULT_KEYS); store.set('keys',keys); paintKeys(); });
 let resetArm=false;
 $('resetStats').addEventListener('click',e=>{
